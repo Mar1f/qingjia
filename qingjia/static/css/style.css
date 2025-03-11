@@ -1,0 +1,50 @@
+.container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input[type="text"], textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+button {
+    padding: 8px 15px;
+    margin-right: 10px;
+    background: #409eff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.message {
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 4px;
+}
+
+.success { background: #e1f3d8; color: #67c23a; }
+.error { background: #fde2e2; color: #f56c6c; }
+.date-range {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.filter-section h3 {
+    color: #666;
+    margin-bottom: 10px;
+}

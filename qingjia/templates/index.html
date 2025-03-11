@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请假管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>请假申请系统</h1>
+
+        <div class="form-container">
+            <form id="leaveForm">
+                <div class="form-group">
+                    <label for="student_id">学号：</label>
+                    <input type="text" id="student_id" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">姓名：</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="leave_date">请假日期：</label>
+                    <input type="date" id="leave_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="reason">请假原因：</label>
+                    <textarea id="reason" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="photo">证明照片：</label>
+                    <input type="file" id="photo" accept="image/*" required>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" onclick="submitForm()">提交申请</button>
+                   <!-- 在导出部分添加日期筛选 -->
+                    <div class="export-section">
+                        <h3>数据导出</h3>
+                        <div class="date-filter">
+                            <div class="filter-item">
+                                <label>开始日期：</label>
+                                <input type="date" id="start_date">
+                            </div>
+                            <div class="filter-item">
+                                <label>结束日期：</label>
+                                <input type="date" id="end_date">
+                            </div>
+                            <button class="export-btn" onclick="exportData()">导出数据</button>
+                        </div>
+                        <p class="tip">导出的ZIP文件包含Excel表格和对应的请假证明照片</p>
+                    </div>
+{#                    <button type="button" onclick="exportData()">导出数据</button>#}
+                </div>
+            </form>
+
+            <div id="message" class="message-hidden"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
