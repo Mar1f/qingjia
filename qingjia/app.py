@@ -28,9 +28,9 @@ cos_client = CosS3Client(cos_config)
 # 数据库配置
 db_config = {
     'host': os.getenv('DB_HOST', 'localhost'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_NAME', 'leave_system'),
+    'user': os.getenv('DB_USER', 'leave_peo'),
+    'password': os.getenv('DB_PASSWORD', '123456'),
+    'database': os.getenv('DB_NAME', 'leave_peo'),
     'charset': 'utf8mb4'
 }
 
@@ -72,7 +72,7 @@ def submit_application():
         # 生成唯一文件名
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         file_ext = os.path.splitext(photo.filename)[1].lower()
-        cos_filename = f"{student_id}_{timestamp}{file_ext}"
+        cos_filename = f"{student_id}_{name}_{timestamp}{file_ext}"
         cos_path = f"photos/{cos_filename}"
 
         # 上传到腾讯云COS
@@ -115,47 +115,42 @@ def submit_application():
 @app.route('/api/export')
 def export_data():
     try:
-        # 获取日期参数并验证
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
-        # 日期格式验证函数
+        # 确保日期格式正确并转换为日期对象
         def validate_date(date_str):
             try:
-                return datetime.strptime(date_str, '%Y-%m-%d') if date_str else None
+                return datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
             except ValueError:
                 return None
 
-        # 执行验证
         start_date_obj = validate_date(start_date)
         end_date_obj = validate_date(end_date)
-        if (start_date and not start_date_obj) or (end_date and not end_date_obj):
-            return jsonify({'status': 'error', 'message': '日期格式错误（应为YYYY-MM-DD）'}), 400
-        if start_date and end_date and start_date > end_date:
+
+        if not start_date_obj or not end_date_obj:
+            return jsonify({'status': 'error', 'message': '必须提供开始和结束日期'}), 400
+
+        if start_date_obj > end_date_obj:
             return jsonify({'status': 'error', 'message': '开始日期不能晚于结束日期'}), 400
 
-        # 查询数据库
-        query = "SELECT * FROM leave_records WHERE 1=1"
-        params = []
-        if start_date:
-            query += " AND leave_date >= %s"
-            params.append(start_date)
-        if end_date:
-            query += " AND leave_date <= %s"
-            params.append(end_date)
-        query += " ORDER BY leave_date DESC"
-
+        # 修改查询语句，使用严格的日期范围过滤
         connection = get_db_connection()
         try:
             with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute(query, params)
+                query = """
+                    SELECT * FROM leave_records 
+                    WHERE leave_date >= %s AND leave_date <= %s 
+                    ORDER BY leave_date DESC
+                """
+                cursor.execute(query, (start_date_obj, end_date_obj))
                 records = cursor.fetchall()
         finally:
             connection.close()
 
         # 创建临时工作目录
         temp_dir = tempfile.mkdtemp()
-        photos_dir = os.path.join(temp_dir, '请假证明照片')
+        photos_dir = os.path.join(temp_dir, '22级软件工程ISEC第五周假条')
         os.makedirs(photos_dir, exist_ok=True)
 
         # 下载所有关联图片
@@ -184,30 +179,31 @@ def export_data():
         wb = Workbook()
         ws = wb.active
         ws.title = "请假记录"
-        headers = ['学号', '姓名', '请假日期', '请假原因']
+        headers = ['学号', '专业', '姓名', '请假日期', '请假原因']
         ws.append(headers)
 
         for record in records:
             ws.append([
                 record['student_id'],
+                '软件工程ISEC',
                 record['name'],
                 record['leave_date'].strftime('%Y-%m-%d'),
                 record['reason']
             ])
 
-        excel_path = os.path.join(temp_dir, '请假记录.xlsx')
+        excel_path = os.path.join(temp_dir, '22级软件工程ISEC第五周请假汇总表.xlsx')
         wb.save(excel_path)
 
         # 创建ZIP压缩包
         zip_path = os.path.join(temp_dir, 'export.zip')
         with ZipFile(zip_path, 'w') as zipf:
             # 添加Excel文件
-            zipf.write(excel_path, arcname='请假记录.xlsx')
+            zipf.write(excel_path, arcname='22级软件工程ISEC第五周请假汇总表.xlsx')
             # 添加图片目录
             for root, dirs, files in os.walk(photos_dir):
                 for file in files:
                     file_path = os.path.join(root, file)
-                    arcname = os.path.join('请假证明照片', file)
+                    arcname = os.path.join('22级软件工程ISEC第五周假条', file)
                     zipf.write(file_path, arcname=arcname)
 
         # 设置清理回调
@@ -220,7 +216,7 @@ def export_data():
             return response
 
         # 生成下载文件名
-        filename = f"请假记录_导出_{datetime.now().strftime('%Y%m%d%H%M')}.zip"
+        filename = f"22级软件工程ISEC第五周假条.zip"
         return send_file(
             zip_path,
             as_attachment=True,
@@ -255,14 +251,36 @@ def init_database():
                 )
             """)
         conn.commit()
+
+
 # 在app.py中添加测试路由
 @app.route('/ping')
 def ping():
     return f"服务运行在端口 {os.getenv('FLASK_PORT', 23456)}"
 
+
+@app.route('/today')
+def show_today():
+    try:
+        connection = get_db_connection()
+        today = datetime.now().strftime('%Y-%m-%d')
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                SELECT student_id, name, reason, photo_url 
+                FROM leave_records 
+                WHERE leave_date = %s 
+                ORDER BY create_time DESC
+            """, (today,))
+            records = cursor.fetchall()
+        connection.close()
+        return render_template('today.html', records=records, today=today)
+    except Exception as e:
+        return render_template('error.html', message=f'数据加载失败: {str(e)}')
+
+
 if __name__ == '__main__':
     init_database()
     app.run(
-        host='0.0.0.0',port=23456,
+        host='0.0.0.0', port=23456,
         debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     )

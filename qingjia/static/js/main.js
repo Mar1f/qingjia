@@ -24,11 +24,18 @@ function exportData() {
     const startDate = document.getElementById('start_date').value;
     const endDate = document.getElementById('end_date').value;
 
-    // 构建查询参数
+    if (!startDate || !endDate) {
+        showMessage('请选择开始和结束日期', 'error');
+        return;
+    }
+
+    // 构建带参数的URL
     const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-    window.location.href = '/api/export';
+    params.append('start_date', startDate);
+    params.append('end_date', endDate);
+    
+    // 使用构建的参数访问导出接口
+    window.location.href = `/api/export?${params.toString()}`;
 }
 
 function showMessage(text, type) {
